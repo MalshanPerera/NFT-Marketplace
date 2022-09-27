@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 import "hardhat/console.sol";
 
-
 contract NFTMarketplace is ERC721URIStorage {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
@@ -61,9 +60,11 @@ contract NFTMarketplace is ERC721URIStorage {
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
 
-        _mint(msg.sender, newTokenId);
+        _safeMint(msg.sender, newTokenId);
         _setTokenURI(newTokenId, tokenURI);
+
         createMarketItem(newTokenId, price);
+
         return newTokenId;
     }
 
@@ -83,6 +84,7 @@ contract NFTMarketplace is ERC721URIStorage {
         );
 
         _transfer(msg.sender, address(this), tokenId);
+
         emit MarketItemCreated(
             tokenId,
             msg.sender,
@@ -102,10 +104,12 @@ contract NFTMarketplace is ERC721URIStorage {
             msg.value == listingPrice,
             "Price must be equal to listing price"
         );
+
         idToMarketItem[tokenId].sold = false;
         idToMarketItem[tokenId].price = price;
         idToMarketItem[tokenId].seller = payable(msg.sender);
         idToMarketItem[tokenId].owner = payable(address(this));
+
         _itemsSold.decrement();
 
         _transfer(msg.sender, address(this), tokenId);
@@ -119,13 +123,18 @@ contract NFTMarketplace is ERC721URIStorage {
             msg.value == price,
             "Please submit the asking price in order to complete the purchase"
         );
+
+        address seller = idToMarketItem[tokenId].seller;
+
         idToMarketItem[tokenId].owner = payable(msg.sender);
         idToMarketItem[tokenId].sold = true;
         idToMarketItem[tokenId].seller = payable(address(0));
+
         _itemsSold.increment();
+
         _transfer(address(this), msg.sender, tokenId);
         payable(owner).transfer(listingPrice);
-        payable(idToMarketItem[tokenId].seller).transfer(msg.value);
+        payable(seller).transfer(msg.value);
     }
 
     /* Returns all unsold market items */
